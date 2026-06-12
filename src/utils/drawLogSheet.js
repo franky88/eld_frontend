@@ -1,15 +1,23 @@
 // ── Canvas dimensions ─────────────────────────────────────────────────────────
 export const CANVAS_W = 1100;
-export const CANVAS_H = 640;
+export const CANVAS_H = 660;
+
+// ── Header row geometry (verified pixel math) ────────────────────────────────
+//   R0 : y=0,   h=28  → bottom border at y=28
+//   R1 : y=28,  h=72  → bottom border at y=100
+//   R2 : y=100, h=48  → bottom border at y=148
+//   R3 : y=148, h=40  → bottom border at y=188
+//   Ruler: y=188, h=24 → ruler bottom at y=212
+//   Grid starts at y=212
 
 // ── Grid geometry ─────────────────────────────────────────────────────────────
-export const GRID_X = 100; // left edge of 24-hr grid
-export const GRID_W = 860; // total width = 24 hours
-export const GRID_TOP_Y = 200; // top of first status row: R0(18)+R1(68)+R2(48)+R3(42)+ruler(24)=200
-export const ROW_H = 42; // height of each status row
+export const GRID_X = 100;
+export const GRID_W = 860;
+export const GRID_TOP_Y = 212; // ruler bottom = 188+24
+export const ROW_H = 42;
 export const DOT_R = 3.5;
 
-// ── Row Y positions (top edge of each row) ────────────────────────────────────
+// ── Row Y positions ───────────────────────────────────────────────────────────
 export const ROW_Y = {
   offDuty: GRID_TOP_Y,
   sleeperBerth: GRID_TOP_Y + ROW_H,
@@ -48,7 +56,6 @@ export function drawLogSheet(ctx, dayPlan) {
   if (!ctx || !dayPlan) return;
   ctx.clearRect(0, 0, CANVAS_W, CANVAS_H);
   fbx(ctx, 0, 0, CANVAS_W, CANVAS_H, "#FFFFFF");
-
   drawHeader(ctx, dayPlan.fields);
   drawTopRuler(ctx);
   drawGrid(ctx);
@@ -59,42 +66,53 @@ export function drawLogSheet(ctx, dayPlan) {
 }
 
 // ═════════════════════════════════════════════════════════════════════════════
-// HEADER  (rows 1-4 above the grid)
+// HEADER
+// Row 0  y=0   h=28  — banner strip
+// Row 1  y=28  h=72  — date | miles | signature | vehicle
+// Row 2  y=100 h=48  — carrier | co-driver
+// Row 3  y=148 h=40  — main office | total hours label
 // ═════════════════════════════════════════════════════════════════════════════
 function drawHeader(ctx, f) {
   ctx.strokeStyle = "#000";
   ctx.lineWidth = 1;
-
   const W = CANVAS_W;
   const PAD = 6;
 
-  // ── Row 0: top banner ──────────────────────────────────────────────────────
-  fbx(ctx, 0, 0, W, 18, "#f0f0f0");
-  bx(ctx, 0, 0, W, 18);
+  // ── Row 0: banner  (y=0, h=28) ────────────────────────────────────────────
+  // All text baselines must be ≤ 20 so they sit 8 px above the bottom border.
+  const R0Y = 0,
+    R0H = 28;
+  fbx(ctx, 0, R0Y, W, R0H, "#f0f0f0");
+  bx(ctx, 0, R0Y, W, R0H);
+
   txt(
     ctx,
     "U.S. DEPARTMENT OF TRANSPORTATION",
     PAD,
-    13,
+    R0Y + 12,
     "bold 9px Arial",
     "left",
   );
-  txt(ctx, "DRIVER'S DAILY LOG", W / 2, 13, "bold 13px Arial", "center");
+
+  // Centre block: two lines, top at +10, bottom at +20  (border at +28 → 8px gap)
+  txt(ctx, "DRIVER'S DAILY LOG", W / 2, R0Y + 12, "bold 12px Arial", "center");
   txt(
     ctx,
     "(ONE CALENDAR DAY — 24 HOURS)",
     W / 2,
-    24,
-    "8px Arial",
+    R0Y + 22,
+    "7.5px Arial",
     "center",
     "#333",
   );
+
+  // Right block: two lines at +10 / +20
   txt(
     ctx,
     "ORIGINAL — Submit to carrier within 13 days",
     W - PAD,
-    10,
-    "7.5px Arial",
+    R0Y + 10,
+    "7px Arial",
     "right",
     "#333",
   );
@@ -102,44 +120,44 @@ function drawHeader(ctx, f) {
     ctx,
     "DUPLICATE — Driver retains possession for eight days",
     W - PAD,
-    20,
-    "7.5px Arial",
+    R0Y + 20,
+    "7px Arial",
     "right",
     "#333",
   );
 
-  // ── Row 1: Date | Miles | Signature | Vehicle ──────────────────────────────
-  // R1H = 68: large value sits at +28, sub-label at +46, border at +68
-  // → 22px gap between sub-label baseline and the bottom border line.
-  const R1Y = 18,
-    R1H = 68;
+  // ── Row 1: Date | Miles | Signature | Vehicle  (y=28, h=72) ──────────────
+  // Large text baseline at R1Y+34, sub-label baseline at R1Y+54.
+  // Bottom border at R1Y+72 → sub-label has 18 px breathing room.
+  const R1Y = R0Y + R0H; // 28
+  const R1H = 72;
   bx(ctx, 0, R1Y, W, R1H);
 
-  // Date section (left ~220px)
+  // — Date (0..220) —
   bx(ctx, 0, R1Y, 220, R1H);
-  const dp = (f.date || "--  --  ----").split("-");
+  const dp = (f.date || "----  --  --").split("-");
   const mo = dp[1] || "--",
     dy = dp[2] || "--",
     yr = dp[0] || "----";
-  txt(ctx, mo, 40, R1Y + 28, "bold 22px Arial", "center");
-  txt(ctx, dy, 90, R1Y + 28, "bold 22px Arial", "center");
-  txt(ctx, yr, 165, R1Y + 28, "bold 22px Arial", "center");
-  // Sub-labels: baseline at R1H - 22 → 22 px clear of bottom border
-  txt(ctx, "(MONTH)", 40, R1Y + 46, "7px Arial", "center", "#555");
-  txt(ctx, "(DAY)", 90, R1Y + 46, "7px Arial", "center", "#555");
-  txt(ctx, "(YEAR)", 165, R1Y + 46, "7px Arial", "center", "#555");
+  txt(ctx, mo, 40, R1Y + 34, "bold 22px Arial", "center");
+  txt(ctx, dy, 90, R1Y + 34, "bold 22px Arial", "center");
+  txt(ctx, yr, 165, R1Y + 34, "bold 22px Arial", "center");
+  txt(ctx, "(MONTH)", 40, R1Y + 54, "7px Arial", "center", "#555");
+  txt(ctx, "(DAY)", 90, R1Y + 54, "7px Arial", "center", "#555");
+  txt(ctx, "(YEAR)", 165, R1Y + 54, "7px Arial", "center", "#555");
+  // internal dividers
   ctx.lineWidth = 0.6;
   ln(ctx, 60, R1Y, 60, R1Y + R1H);
   ln(ctx, 115, R1Y, 115, R1Y + R1H);
   ctx.lineWidth = 1;
 
-  // Miles section
+  // — Miles (220..420) —
   bx(ctx, 220, R1Y, 200, R1H);
   txt(
     ctx,
     String(f.total_miles ?? "0"),
     320,
-    R1Y + 28,
+    R1Y + 34,
     "bold 22px Arial",
     "center",
   );
@@ -147,34 +165,35 @@ function drawHeader(ctx, f) {
     ctx,
     "(TOTAL MILES DRIVING TODAY)",
     320,
-    R1Y + 46,
+    R1Y + 54,
     "7px Arial",
     "center",
     "#555",
   );
 
-  // Signature section
+  // — Signature (420..720) —
+  // Certification text at R1Y+14 (top), signature at R1Y+40 (middle)
+  // Sub-caption "(DRIVER'S SIGNATURE)" removed from this cell — no crowding.
   bx(ctx, 420, R1Y, 300, R1H);
   txt(
     ctx,
     "I certify that these entries are true and correct",
     570,
-    R1Y + 16,
+    R1Y + 18,
     "italic 7.5px Arial",
     "center",
-    "#333",
+    "#444",
   );
-  // Signature baseline at +40, sub-label at +46 — both clear of border at +68
   txt(
     ctx,
     f.driver_signature || "Driver",
     570,
-    R1Y + 38,
+    R1Y + 44,
     "bold italic 18px Arial",
     "center",
   );
 
-  // Vehicle numbers section
+  // — Vehicle (720..end) —
   bx(ctx, 720, R1Y, W - 720, R1H);
   txt(
     ctx,
@@ -182,7 +201,7 @@ function drawHeader(ctx, f) {
       ? f.tractor_number
       : "123, 45678",
     850,
-    R1Y + 28,
+    R1Y + 34,
     "bold 20px Arial",
     "center",
   );
@@ -190,16 +209,16 @@ function drawHeader(ctx, f) {
     ctx,
     "VEHICLE NUMBERS — (SHOW EACH UNIT)",
     850,
-    R1Y + 46,
+    R1Y + 54,
     "7px Arial",
     "center",
     "#555",
   );
 
-  // ── Row 2: Carrier | Co-driver ─────────────────────────────────────────────
-  // R2H = 48: main text at +22, sub-label at +36 → 12 px clear of border
-  const R2Y = R1Y + R1H,
-    R2H = 48;
+  // ── Row 2: Carrier | Co-driver  (y=100, h=48) ────────────────────────────
+  // Main text at R2Y+22, sub-label at R2Y+38. Border at R2Y+48 → 10px gap.
+  const R2Y = R1Y + R1H; // 100
+  const R2H = 48;
   bx(ctx, 0, R2Y, W, R2H);
 
   bx(ctx, 0, R2Y, 420, R2H);
@@ -215,7 +234,7 @@ function drawHeader(ctx, f) {
     ctx,
     "(NAME OF CARRIER OR CARRIERS)",
     210,
-    R2Y + 36,
+    R2Y + 38,
     "7px Arial",
     "center",
     "#555",
@@ -234,18 +253,18 @@ function drawHeader(ctx, f) {
     ctx,
     "(DRIVER'S SIGNATURE IN FULL)",
     590,
-    R2Y + 36,
+    R2Y + 38,
     "7px Arial",
     "center",
     "#555",
   );
   txt(ctx, "—", 860, R2Y + 22, "12px Arial", "center");
-  txt(ctx, "(NAME OF CO_DRIVER)", 860, R2Y + 36, "7px Arial", "center", "#555");
+  txt(ctx, "(NAME OF CO-DRIVER)", 860, R2Y + 38, "7px Arial", "center", "#555");
 
-  // ── Row 3: Main office | TOTAL HOURS label ─────────────────────────────────
-  // R3H = 42: main text at +16, sub-label at +30 → 12 px clear of border at +42
-  const R3Y = R2Y + R2H,
-    R3H = 42;
+  // ── Row 3: Main office | Total Hours label  (y=148, h=40) ────────────────
+  // Main text at R3Y+18, sub-label at R3Y+30. Border at R3Y+40 → 10px gap.
+  const R3Y = R2Y + R2H; // 148
+  const R3H = 40;
   bx(ctx, 0, R3Y, W, R3H);
 
   bx(ctx, 0, R3Y, 420, R3H);
@@ -261,56 +280,57 @@ function drawHeader(ctx, f) {
     ctx,
     "(MAIN OFFICE ADDRESS)",
     210,
-    R3Y + 32,
+    R3Y + 30,
     "7px Arial",
     "center",
     "#555",
   );
 
   bx(ctx, 420, R3Y, W - 420, R3H);
-  // TOTAL HOURS label at far right above totals column
   const totX = GRID_X + GRID_W;
   txt(ctx, "TOTAL", totX + 34, R3Y + 14, "bold 8px Arial", "center");
   txt(ctx, "HOURS", totX + 34, R3Y + 24, "bold 8px Arial", "center");
 }
 
 // ═════════════════════════════════════════════════════════════════════════════
-// TOP RULER  (hour labels + tick marks above the grid)
+// TOP RULER  (y=188, h=24) — immediately after Row 3 bottom
 // ═════════════════════════════════════════════════════════════════════════════
 function drawTopRuler(ctx) {
-  const RY = 176; // immediately after R0+R1+R2+R3 = 18+68+48+42
-  const RH = 24; // height of ruler band
+  const RY = 188; // R0(28)+R1(72)+R2(48)+R3(40) = 188
+  const RH = 24;
 
   fbx(ctx, GRID_X, RY, GRID_W, RH, "#f8f8f4");
   ctx.strokeStyle = "#000";
   ctx.lineWidth = 1;
 
-  // Row labels on left (vertically centered to each grid row)
+  // Row labels on the left margin
   const labels = [
     ["Off", "Duty"],
     ["Sleeper", "Berth"],
     ["Driving", null],
     ["On Duty", "(Not\nDriving)"],
   ];
-  const rowKeys = Object.keys(ROW_Y);
-  rowKeys.forEach((k, i) => {
+  Object.keys(ROW_Y).forEach((k, i) => {
     const ry = ROW_Y[k];
-    ctx.font = "bold 8.5px Arial";
-    ctx.textAlign = "right";
-    ctx.fillStyle = "#000";
+    const mid = ry + ROW_H / 2;
     const lns = labels[i];
+    ctx.fillStyle = "#000";
+    ctx.textAlign = "right";
     if (!lns[1]) {
-      ctx.fillText(lns[0], GRID_X - 4, ry + ROW_H / 2 + 3);
+      ctx.font = "bold 8.5px Arial";
+      ctx.fillText(lns[0], GRID_X - 4, mid + 3);
     } else if (lns[1].includes("\n")) {
       const parts = lns[1].split("\n");
-      ctx.fillText(lns[0], GRID_X - 4, ry + ROW_H / 2 - 8);
+      ctx.font = "bold 8.5px Arial";
+      ctx.fillText(lns[0], GRID_X - 4, mid - 8);
       ctx.font = "7.5px Arial";
-      ctx.fillText(parts[0], GRID_X - 4, ry + ROW_H / 2 + 2);
-      ctx.fillText(parts[1], GRID_X - 4, ry + ROW_H / 2 + 11);
+      ctx.fillText(parts[0], GRID_X - 4, mid + 2);
+      ctx.fillText(parts[1], GRID_X - 4, mid + 11);
     } else {
-      ctx.fillText(lns[0], GRID_X - 4, ry + ROW_H / 2 - 3);
+      ctx.font = "bold 8.5px Arial";
+      ctx.fillText(lns[0], GRID_X - 4, mid - 3);
       ctx.font = "7.5px Arial";
-      ctx.fillText(lns[1], GRID_X - 4, ry + ROW_H / 2 + 8);
+      ctx.fillText(lns[1], GRID_X - 4, mid + 8);
     }
   });
 
@@ -318,24 +338,11 @@ function drawTopRuler(ctx) {
 }
 
 // ═════════════════════════════════════════════════════════════════════════════
-// RULER TICKS  (shared by top + bottom rulers)
+// RULER TICKS
 // ═════════════════════════════════════════════════════════════════════════════
 function drawRulerTicks(ctx, rulerY, rulerH, showLabels) {
   for (let h = 0; h <= 24; h++) {
     const x = hrToX(h);
-
-    ctx.strokeStyle = "#555";
-    ctx.lineWidth = h % 6 === 0 ? 1 : 0.6;
-
-    if (h < 24) {
-      for (let q = 1; q <= 3; q++) {
-        const qx = hrToX(h + q / 4);
-        const tickH = q === 2 ? rulerH * 0.55 : rulerH * 0.35;
-        ctx.strokeStyle = "#999";
-        ctx.lineWidth = 0.4;
-      }
-    }
-
     if (showLabels) {
       const label =
         h === 0
@@ -353,10 +360,9 @@ function drawRulerTicks(ctx, rulerY, rulerH, showLabels) {
 }
 
 // ═════════════════════════════════════════════════════════════════════════════
-// GRID  (4 status rows + internal tick marks)
+// GRID
 // ═════════════════════════════════════════════════════════════════════════════
 function drawGrid(ctx) {
-  // Row backgrounds (alternating very subtle tint)
   Object.values(ROW_Y).forEach((ry, i) => {
     fbx(ctx, GRID_X, ry, GRID_W, ROW_H, i % 2 === 0 ? "#FAFAF6" : "#F4F4EE");
   });
@@ -365,7 +371,6 @@ function drawGrid(ctx) {
   ctx.lineWidth = 1;
   bx(ctx, GRID_X, GRID_TOP_Y, GRID_W, ROW_H * 4);
 
-  // Internal grid lines
   Object.values(ROW_Y).forEach((ry) => {
     ctx.strokeStyle = "#000";
     ctx.lineWidth = 0.8;
@@ -419,8 +424,7 @@ function drawStatusLines(ctx, events) {
     ctx.lineTo(x2, y);
     ctx.stroke();
 
-    // FIX (red rect): brackets must be clipped to the row so they never
-    // draw lines outside the row boundary. Save/restore keeps the clip local.
+    // Brackets — clipped strictly to this row's rectangle
     if (ev.is_stationary) {
       ctx.save();
       ctx.beginPath();
@@ -443,7 +447,7 @@ function drawStatusLines(ctx, events) {
 }
 
 // ═════════════════════════════════════════════════════════════════════════════
-// BRACKETS  (above stationary on-duty events — clipped to row by caller)
+// BRACKETS
 // ═════════════════════════════════════════════════════════════════════════════
 function drawBrackets(ctx, x1, x2, lineY) {
   const bH = 10;
@@ -462,20 +466,18 @@ function drawBrackets(ctx, x1, x2, lineY) {
 }
 
 // ═════════════════════════════════════════════════════════════════════════════
-// TOTALS  (right of grid — boxed hours per row + sum)
+// TOTALS
 // ═════════════════════════════════════════════════════════════════════════════
 function drawTotals(ctx, totals) {
   const tx = GRID_X + GRID_W + 2;
   const bw = 68;
 
-  const rows = [
+  [
     ["offDuty", totals.offDuty],
     ["sleeperBerth", totals.sleeperBerth],
     ["driving", totals.driving],
     ["onDutyNotDriving", totals.onDutyNotDriving],
-  ];
-
-  rows.forEach(([key, val]) => {
+  ].forEach(([key, val]) => {
     const ry = ROW_Y[key];
     ctx.strokeStyle = "#000";
     ctx.lineWidth = 0.8;
@@ -491,7 +493,6 @@ function drawTotals(ctx, totals) {
     );
   });
 
-  // FIX (green rect): removed "=" prefix — show just the numeric sum.
   const sum = Object.values(totals).reduce((a, b) => a + Number(b), 0);
   const sumY = GRID_TOP_Y + ROW_H * 4 + 4;
   ctx.strokeStyle = "#000";
@@ -501,7 +502,7 @@ function drawTotals(ctx, totals) {
 }
 
 // ═════════════════════════════════════════════════════════════════════════════
-// BOTTOM RULER  (below grid, mirror of top)
+// BOTTOM RULER
 // ═════════════════════════════════════════════════════════════════════════════
 function drawBottomRuler(ctx) {
   const RY = GRID_TOP_Y + ROW_H * 4;
@@ -514,7 +515,7 @@ function drawBottomRuler(ctx) {
 }
 
 // ═════════════════════════════════════════════════════════════════════════════
-// REMARKS  (location labels + horizontal divider line below ruler)
+// REMARKS
 // ═════════════════════════════════════════════════════════════════════════════
 function drawRemarks(ctx, remarks) {
   const rulerBottom = GRID_TOP_Y + ROW_H * 4 + 22;
@@ -526,18 +527,14 @@ function drawRemarks(ctx, remarks) {
   ctx.lineWidth = 1;
   bx(ctx, 0, remarksAreaY, CANVAS_W, remarksAreaH);
 
-  // "REMARKS" label
   txt(ctx, "REMARKS", 6, remarksAreaY + 14, "bold 9px Arial", "left");
 
-  // ── FIX (green rect): replaced the small inner tick strip with a clean
-  //    horizontal rule that matches the grid width.  No extra ruler box is
-  //    drawn — just a single line — so nothing overlaps the diagonal labels. ──
-  const dividerY = remarksAreaY + 20;
+  // Horizontal divider line with hour ticks — labels sit ABOVE the line
+  const dividerY = remarksAreaY + 22;
   ctx.strokeStyle = "#888";
   ctx.lineWidth = 0.8;
   ln(ctx, GRID_X, dividerY, GRID_X + GRID_W, dividerY);
 
-  // Hour reference ticks along the divider (lightweight, no box)
   for (let h = 0; h <= 24; h++) {
     const x = hrToX(h);
     const tickH = h % 6 === 0 ? 6 : 3;
@@ -545,42 +542,33 @@ function drawRemarks(ctx, remarks) {
     ctx.lineWidth = h % 6 === 0 ? 0.7 : 0.35;
     ln(ctx, x, dividerY, x, dividerY + tickH);
 
-    // ── FIX (green rect): hour labels drawn ABOVE the divider line (inside
-    //    the divider strip) so they don't overlap the diagonal remark text. ──
     const label =
       h === 0 ? "Mid" : h === 24 ? "Mid" : h === 12 ? "Noon" : String(h);
     const font =
       h === 0 || h === 12 || h === 24 ? "bold 6.5px Arial" : "6.5px Arial";
-    txt(ctx, label, x, dividerY - 3, font, "center", "#444");
+    // Labels above the divider line — baseline 4px above it
+    txt(ctx, label, x, dividerY - 4, font, "center", "#444");
   }
 
-  // Diagonal location labels below the divider
   if (!remarks || remarks.length === 0) return;
 
-  const labelStartY = dividerY + 8;
-
+  const labelStartY = dividerY + 10;
   remarks.forEach((r) => {
     const timeParts = (r.time || "0:0").split(":");
     const hour = parseFloat(timeParts[0]) + parseFloat(timeParts[1] || 0) / 60;
     const x = hrToX(hour);
 
-    // Short vertical stem from divider down to the text start
     ctx.strokeStyle = "#333";
     ctx.lineWidth = 0.8;
-    ln(ctx, x, dividerY + tickStemH(r), x, labelStartY);
+    ln(ctx, x, dividerY + 4, x, labelStartY);
 
     ctx.save();
     ctx.translate(x + 2, labelStartY);
-    ctx.rotate(Math.PI / 3); // ~60 degrees
+    ctx.rotate(Math.PI / 3);
     ctx.font = "8px Arial";
     ctx.fillStyle = "#111";
     ctx.textAlign = "left";
     ctx.fillText(r.location || "", 0, 0);
     ctx.restore();
   });
-}
-
-// tiny helper — keep stem height consistent
-function tickStemH(_r) {
-  return 4;
 }
