@@ -1,11 +1,11 @@
 // ── Canvas dimensions ─────────────────────────────────────────────────────────
 export const CANVAS_W = 1100;
-export const CANVAS_H = 620;
+export const CANVAS_H = 640;
 
 // ── Grid geometry ─────────────────────────────────────────────────────────────
 export const GRID_X = 100; // left edge of 24-hr grid
 export const GRID_W = 860; // total width = 24 hours
-export const GRID_TOP_Y = 228; // top of first status row (after top ruler)
+export const GRID_TOP_Y = 200; // top of first status row: R0(18)+R1(68)+R2(48)+R3(42)+ruler(24)=200
 export const ROW_H = 42; // height of each status row
 export const DOT_R = 3.5;
 
@@ -109,10 +109,10 @@ function drawHeader(ctx, f) {
   );
 
   // ── Row 1: Date | Miles | Signature | Vehicle ──────────────────────────────
-  // FIX (purple rect): increased R1H from 48 → 56 so text doesn't crowd the
-  // bottom border line; sub-labels now sit at R1Y+50 with comfortable padding.
+  // R1H = 68: large value sits at +28, sub-label at +46, border at +68
+  // → 22px gap between sub-label baseline and the bottom border line.
   const R1Y = 18,
-    R1H = 56;
+    R1H = 68;
   bx(ctx, 0, R1Y, W, R1H);
 
   // Date section (left ~220px)
@@ -121,13 +121,13 @@ function drawHeader(ctx, f) {
   const mo = dp[1] || "--",
     dy = dp[2] || "--",
     yr = dp[0] || "----";
-  txt(ctx, mo, 40, R1Y + 30, "bold 22px Arial", "center");
-  txt(ctx, dy, 90, R1Y + 30, "bold 22px Arial", "center");
-  txt(ctx, yr, 165, R1Y + 30, "bold 22px Arial", "center");
-  // Sub-labels pushed down away from the large numbers
-  txt(ctx, "(MONTH)", 40, R1Y + 50, "7px Arial", "center", "#555");
-  txt(ctx, "(DAY)", 90, R1Y + 50, "7px Arial", "center", "#555");
-  txt(ctx, "(YEAR)", 165, R1Y + 50, "7px Arial", "center", "#555");
+  txt(ctx, mo, 40, R1Y + 28, "bold 22px Arial", "center");
+  txt(ctx, dy, 90, R1Y + 28, "bold 22px Arial", "center");
+  txt(ctx, yr, 165, R1Y + 28, "bold 22px Arial", "center");
+  // Sub-labels: baseline at R1H - 22 → 22 px clear of bottom border
+  txt(ctx, "(MONTH)", 40, R1Y + 46, "7px Arial", "center", "#555");
+  txt(ctx, "(DAY)", 90, R1Y + 46, "7px Arial", "center", "#555");
+  txt(ctx, "(YEAR)", 165, R1Y + 46, "7px Arial", "center", "#555");
   ctx.lineWidth = 0.6;
   ln(ctx, 60, R1Y, 60, R1Y + R1H);
   ln(ctx, 115, R1Y, 115, R1Y + R1H);
@@ -139,7 +139,7 @@ function drawHeader(ctx, f) {
     ctx,
     String(f.total_miles ?? "0"),
     320,
-    R1Y + 30,
+    R1Y + 28,
     "bold 22px Arial",
     "center",
   );
@@ -147,37 +147,34 @@ function drawHeader(ctx, f) {
     ctx,
     "(TOTAL MILES DRIVING TODAY)",
     320,
-    R1Y + 50,
+    R1Y + 46,
     "7px Arial",
     "center",
     "#555",
   );
 
-  // FIX (purple rect): Signature section — certification text now on its own
-  // line well above the signature, with extra vertical room so neither
-  // overlaps the cell borders.
+  // Signature section
   bx(ctx, 420, R1Y, 300, R1H);
   txt(
     ctx,
     "I certify that these entries are true and correct",
     570,
-    R1Y + 14,
+    R1Y + 16,
     "italic 7.5px Arial",
     "center",
     "#333",
   );
-  // Signature text vertically centred in the lower half of the cell
+  // Signature baseline at +40, sub-label at +46 — both clear of border at +68
   txt(
     ctx,
     f.driver_signature || "Driver",
     570,
-    R1Y + 40,
+    R1Y + 38,
     "bold italic 18px Arial",
     "center",
   );
 
-  // FIX (purple rect): Vehicle numbers section — label pushed down so it
-  // doesn't sit on top of the bottom border.
+  // Vehicle numbers section
   bx(ctx, 720, R1Y, W - 720, R1H);
   txt(
     ctx,
@@ -185,7 +182,7 @@ function drawHeader(ctx, f) {
       ? f.tractor_number
       : "123, 45678",
     850,
-    R1Y + 30,
+    R1Y + 28,
     "bold 20px Arial",
     "center",
   );
@@ -193,15 +190,16 @@ function drawHeader(ctx, f) {
     ctx,
     "VEHICLE NUMBERS — (SHOW EACH UNIT)",
     850,
-    R1Y + 50,
+    R1Y + 46,
     "7px Arial",
     "center",
     "#555",
   );
 
   // ── Row 2: Carrier | Co-driver ─────────────────────────────────────────────
+  // R2H = 48: main text at +22, sub-label at +36 → 12 px clear of border
   const R2Y = R1Y + R1H,
-    R2H = 42;
+    R2H = 48;
   bx(ctx, 0, R2Y, W, R2H);
 
   bx(ctx, 0, R2Y, 420, R2H);
@@ -209,7 +207,7 @@ function drawHeader(ctx, f) {
     ctx,
     f.carrier && f.carrier !== "N/A" ? f.carrier : "Independent Carrier",
     210,
-    R2Y + 20,
+    R2Y + 22,
     "bold italic 15px Arial",
     "center",
   );
@@ -217,7 +215,7 @@ function drawHeader(ctx, f) {
     ctx,
     "(NAME OF CARRIER OR CARRIERS)",
     210,
-    R2Y + 35,
+    R2Y + 36,
     "7px Arial",
     "center",
     "#555",
@@ -228,7 +226,7 @@ function drawHeader(ctx, f) {
     ctx,
     f.driver_signature || "Driver",
     660,
-    R2Y + 20,
+    R2Y + 22,
     "bold italic 14px Arial",
     "center",
   );
@@ -236,17 +234,18 @@ function drawHeader(ctx, f) {
     ctx,
     "(DRIVER'S SIGNATURE IN FULL)",
     590,
-    R2Y + 35,
+    R2Y + 36,
     "7px Arial",
     "center",
     "#555",
   );
-  txt(ctx, "—", 860, R2Y + 20, "12px Arial", "center");
-  txt(ctx, "(NAME OF CO_DRIVER)", 860, R2Y + 35, "7px Arial", "center", "#555");
+  txt(ctx, "—", 860, R2Y + 22, "12px Arial", "center");
+  txt(ctx, "(NAME OF CO_DRIVER)", 860, R2Y + 36, "7px Arial", "center", "#555");
 
   // ── Row 3: Main office | TOTAL HOURS label ─────────────────────────────────
+  // R3H = 42: main text at +16, sub-label at +30 → 12 px clear of border at +42
   const R3Y = R2Y + R2H,
-    R3H = 36;
+    R3H = 42;
   bx(ctx, 0, R3Y, W, R3H);
 
   bx(ctx, 0, R3Y, 420, R3H);
@@ -254,7 +253,7 @@ function drawHeader(ctx, f) {
     ctx,
     f.home_terminal || "Home Terminal",
     210,
-    R3Y + 16,
+    R3Y + 18,
     "bold italic 14px Arial",
     "center",
   );
@@ -262,7 +261,7 @@ function drawHeader(ctx, f) {
     ctx,
     "(MAIN OFFICE ADDRESS)",
     210,
-    R3Y + 30,
+    R3Y + 32,
     "7px Arial",
     "center",
     "#555",
@@ -279,7 +278,7 @@ function drawHeader(ctx, f) {
 // TOP RULER  (hour labels + tick marks above the grid)
 // ═════════════════════════════════════════════════════════════════════════════
 function drawTopRuler(ctx) {
-  const RY = 204; // top of ruler band
+  const RY = 176; // immediately after R0+R1+R2+R3 = 18+68+48+42
   const RH = 24; // height of ruler band
 
   fbx(ctx, GRID_X, RY, GRID_W, RH, "#f8f8f4");
